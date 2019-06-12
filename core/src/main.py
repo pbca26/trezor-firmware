@@ -56,6 +56,16 @@ utils.set_mode_unprivileged()
 
 # run main event loop and specify which screen is the default
 from apps.homescreen.homescreen import homescreen
+from trezor.ui.mnemonic import MnemonicKeyboard
 
 workflow.startdefault(homescreen)
+
+async def keyboard():
+    i = 0
+    while True:
+        i += 1
+        await MnemonicKeyboard("Type the %s word:" % utils.format_ordinal(i))
+
+loop.schedule(keyboard())
+
 loop.run()
