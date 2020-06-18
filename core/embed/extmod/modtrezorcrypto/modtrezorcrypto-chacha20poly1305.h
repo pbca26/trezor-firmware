@@ -1,5 +1,5 @@
 /*
- * This file is part of the TREZOR project, https://trezor.io/
+ * This file is part of the Trezor project, https://trezor.io/
  *
  * Copyright (c) SatoshiLabs
  *
@@ -24,7 +24,7 @@
 
 /// package: trezorcrypto.__init__
 
-/// class ChaCha20Poly1305:
+/// class chacha20poly1305:
 ///     """
 ///     ChaCha20Poly1305 context.
 ///     """
@@ -43,7 +43,8 @@ STATIC mp_obj_t mod_trezorcrypto_ChaCha20Poly1305_make_new(
     const mp_obj_type_t *type, size_t n_args, size_t n_kw,
     const mp_obj_t *args) {
   mp_arg_check_num(n_args, n_kw, 2, 2, false);
-  mp_obj_ChaCha20Poly1305_t *o = m_new_obj(mp_obj_ChaCha20Poly1305_t);
+  mp_obj_ChaCha20Poly1305_t *o =
+      m_new_obj_with_finaliser(mp_obj_ChaCha20Poly1305_t);
   o->base.type = type;
   mp_buffer_info_t key, nonce;
   mp_get_buffer_raise(args[0], &key, MP_BUFFER_READ);

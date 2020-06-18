@@ -1,12 +1,10 @@
 from trezor import wire
 from trezor.messages import MessageType
 
-from apps.common import HARDENED
-
 CURVE = "ed25519-keccak"
+SLIP44_ID = 43
 
 
-def boot():
-    ns = [[CURVE, HARDENED | 44, HARDENED | 43], [CURVE, HARDENED | 44, HARDENED | 1]]
-    wire.add(MessageType.NEMGetAddress, __name__, "get_address", ns)
-    wire.add(MessageType.NEMSignTx, __name__, "sign_tx", ns)
+def boot() -> None:
+    wire.add(MessageType.NEMGetAddress, __name__, "get_address")
+    wire.add(MessageType.NEMSignTx, __name__, "sign_tx")

@@ -1,94 +1,72 @@
-# initialize from the image
+# install the latest Alpine linux from scratch
 
-FROM python:3.7.3
+FROM scratch
+ARG ALPINE_VERSION=3.12.0
+ADD alpine-minirootfs-${ALPINE_VERSION}-x86_64.tar.gz /
 
-ARG TOOLCHAIN_FLAVOR=linux
-ENV TOOLCHAIN_FLAVOR=$TOOLCHAIN_FLAVOR
+# the following is adapted from https://github.com/NixOS/docker/blob/master/Dockerfile
 
-# install build tools and dependencies
+# Enable HTTPS support in wget and set nsswitch.conf to make resolution work within containers
+RUN apk add --no-cache --update openssl \
+  && echo hosts: dns files > /etc/nsswitch.conf
 
-RUN apt-get update && apt-get install -y \
-    build-essential wget git libsodium-dev graphviz \
-    valgrind check libssl-dev libusb-1.0-0-dev libudev-dev zlib1g-dev \
-    libsdl2-dev libsdl2-image-dev
+# Download Nix and install it into the system.
+ARG NIX_VERSION=2.3.6
+RUN wget https://nixos.org/releases/nix/nix-${NIX_VERSION}/nix-${NIX_VERSION}-x86_64-linux.tar.xz \
+  && tar xf nix-${NIX_VERSION}-x86_64-linux.tar.xz \
+  && addgroup -g 30000 -S nixbld \
+  && for i in $(seq 1 30); do adduser -S -D -h /var/empty -g "Nix build user $i" -u $((30000 + i)) -G nixbld nixbld$i ; done \
+  && mkdir -m 0755 /etc/nix \
+  && echo 'sandbox = false' > /etc/nix/nix.conf \
+  && mkdir -m 0755 /nix && USER=root sh nix-${NIX_VERSION}-x86_64-linux/install \
+  && ln -s /nix/var/nix/profiles/default/etc/profile.d/nix.sh /etc/profile.d/ \
+  && rm -r /nix-${NIX_VERSION}-x86_64-linux* \
+  && rm -rf /var/cache/apk/* \
+  && /nix/var/nix/profiles/default/bin/nix-collect-garbage --delete-old \
+  && /nix/var/nix/profiles/default/bin/nix-store --optimise \
+  && /nix/var/nix/profiles/default/bin/nix-store --verify --check-contents
 
-# install clang-format 6 from backports
-RUN echo "deb http://deb.debian.org/debian stretch-backports main" > /etc/apt/sources.list.d/backports.list
-RUN apt-get update && apt-get install -t stretch-backports -y clang-format-6.0
-RUN ln -s clang-format-6.0 /usr/bin/clang-format
+ENV \
+    USER=root \
+    PATH=/nix/var/nix/profiles/default/bin:/nix/var/nix/profiles/default/sbin:/bin:/sbin:/usr/bin:/usr/sbin \
+    GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt \
+    NIX_SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    NIX_PATH=/nix/var/nix/profiles/per-user/root/channels
 
-# TODO are all apt packages actually needed?
+# Trezor specific stuff starts here
 
-# install dependencies from toolchain source build
+COPY shell.nix shell.nix
 
-RUN if [ "$TOOLCHAIN_FLAVOR" = "src" ]; then \
-        apt-get install -y autoconf autogen bison dejagnu \
-                           flex flip gawk git gperf gzip nsis \
-                           openssh-client p7zip-full perl python-dev \
-                           libisl-dev tcl tofrodos zip \
-                           texinfo texlive texlive-extra-utils; \
+RUN nix-env -i -f shell.nix -A buildInputs
+
+CMD [ "nix-shell" ]
+
+# the rest of the file only applies when docker build is called
+# with the following argument: "--build-arg FULLDEPS_TESTING=1"
+
+ENV TREZOR_MONERO_TESTS_PATH="/opt/trezor_monero_tests"
+
+ARG FULLDEPS_TESTING=0
+ENV FULLDEPS_TESTING=${FULLDEPS_TESTING}
+
+# install other python versions for tox testing
+
+RUN if [ "${FULLDEPS_TESTING}" = "1" ]; then \
+        nix-env -iP python3-3.8.2 ; \
+        nix-env --set-flag priority 6 python3-3.8.2 ; \
+        nix-env -iP python3-3.6.10 ; \
+        nix-env --set-flag priority 7 python3-3.6.10 ; \
+        nix-env -iP python3-3.5.9 ; \
+        nix-env --set-flag priority 8 python3-3.5.9 ; \
     fi
-
-# download toolchain
-
-ENV TOOLCHAIN_SHORTVER=8-2018q4
-ENV TOOLCHAIN_LONGVER=gcc-arm-none-eabi-8-2018-q4-major
-ENV TOOLCHAIN_URL=https://developer.arm.com/-/media/Files/downloads/gnu-rm/$TOOLCHAIN_SHORTVER/$TOOLCHAIN_LONGVER-$TOOLCHAIN_FLAVOR.tar.bz2
-ENV TOOLCHAIN_HASH_linux=fb31fbdfe08406ece43eef5df623c0b2deb8b53e405e2c878300f7a1f303ee52
-ENV TOOLCHAIN_HASH_src=bc228325dbbfaf643f2ee5d19e01d8b1873fcb9c31781b5e1355d40a68704ce7
-
-# extract toolchain
-
-RUN cd /opt && wget $TOOLCHAIN_URL
-
-RUN cd /opt && echo "$TOOLCHAIN_HASH_linux $TOOLCHAIN_LONGVER-linux.tar.bz2\n$TOOLCHAIN_HASH_src $TOOLCHAIN_LONGVER-src.tar.bz2" | sha256sum -c --ignore-missing
-
-RUN cd /opt && tar xfj $TOOLCHAIN_LONGVER-$TOOLCHAIN_FLAVOR.tar.bz2
-
-# build toolchain (if required)
-
-RUN if [ "$TOOLCHAIN_FLAVOR" = "src" ]; then \
-        pushd /opt/$TOOLCHAIN_LONGVER ; \
-        ./install-sources.sh --skip_steps=mingw32 ; \
-        ./build-prerequisites.sh --skip_steps=mingw32 ; \
-        ./build-toolchain.sh --skip_steps=mingw32,manual ; \
-        popd ; \
-    fi
-
-# download protobuf
-
-ENV PROTOBUF_VERSION=3.4.0
-ENV PROTOBUF_HASH=e4b51de1b75813e62d6ecdde582efa798586e09b5beaebfb866ae7c9eaadace4
-RUN wget "https://github.com/google/protobuf/releases/download/v${PROTOBUF_VERSION}/protoc-${PROTOBUF_VERSION}-linux-x86_64.zip"
-RUN echo "${PROTOBUF_HASH} protoc-${PROTOBUF_VERSION}-linux-x86_64.zip" | sha256sum -c
-
-# setup toolchain
-
-ENV PATH=/opt/$TOOLCHAIN_LONGVER/bin:$PATH
-
-ENV LC_ALL=C.UTF-8 LANG=C.UTF-8
-
-# use zipfile module to extract files world-readable
-ENV PYTHON=python
-
-RUN $PYTHON -m zipfile -e "protoc-${PROTOBUF_VERSION}-linux-x86_64.zip" /usr/local && chmod 755 /usr/local/bin/protoc
-
-ENV WORKON_HOME=/tmp/.venvs
 
 # download monero tests binary
 
-ENV TREZOR_MONERO_TESTS_SHA256SUM=140a16b3d6105b5e8e88a93b451e9600a36ed23928ea3cf2f975f9c83f36dab7
-ENV TREZOR_MONERO_TESTS_URL="https://github.com/ph4r05/monero/releases/download/v0.14.1.0-tests-u14.04-01/trezor_tests"
-ENV TREZOR_MONERO_TESTS_PATH="/opt/trezor_monero_tests"
-
-RUN wget "$TREZOR_MONERO_TESTS_URL" -O "$TREZOR_MONERO_TESTS_PATH" \
-    && chmod +x "$TREZOR_MONERO_TESTS_PATH"
-RUN echo "${TREZOR_MONERO_TESTS_SHA256SUM} ${TREZOR_MONERO_TESTS_PATH}" | sha256sum -c
-
-# install python dependencies
-
-RUN pip install pipenv
-
-RUN $PYTHON --version
-RUN pip --version
-RUN pipenv --version
+RUN if [ "${FULLDEPS_TESTING}" = "1" ]; then \
+        TREZOR_MONERO_TESTS_SHA256SUM=1e5dfdb07de4ea46088f4a5bdb0d51f040fe479019efae30f76427eee6edb3f7 ; \
+        TREZOR_MONERO_TESTS_URL="https://github.com/ph4r05/monero/releases/download/v0.15.0.0-tests-u18.04-03/trezor_tests" ; \
+        wget --no-verbose "${TREZOR_MONERO_TESTS_URL}" -O "${TREZOR_MONERO_TESTS_PATH}" ; \
+        chmod +x "${TREZOR_MONERO_TESTS_PATH}" ; \
+        echo "${TREZOR_MONERO_TESTS_SHA256SUM} ${TREZOR_MONERO_TESTS_PATH}" | sha256sum -c ; \
+        nix-shell -p patchelf --run 'patchelf --set-interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" "${TREZOR_MONERO_TESTS_PATH}"' ; \
+    fi

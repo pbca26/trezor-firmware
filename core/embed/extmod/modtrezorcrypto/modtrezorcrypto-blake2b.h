@@ -1,5 +1,5 @@
 /*
- * This file is part of the TREZOR project, https://trezor.io/
+ * This file is part of the Trezor project, https://trezor.io/
  *
  * Copyright (c) SatoshiLabs
  *
@@ -26,10 +26,12 @@
 
 /// package: trezorcrypto.__init__
 
-/// class Blake2b:
+/// class blake2b:
 ///     """
 ///     Blake2b context.
 ///     """
+///     block_size: int
+///     digest_size: int
 typedef struct _mp_obj_Blake2b_t {
   mp_obj_base_t base;
   BLAKE2B_CTX ctx;
@@ -40,7 +42,8 @@ STATIC mp_obj_t mod_trezorcrypto_Blake2b_update(mp_obj_t self, mp_obj_t data);
 /// def __init__(
 ///     self,
 ///     data: bytes = None,
-///     outlen: int = Blake2b.digest_size,
+///     outlen: int = blake2b.digest_size,
+///     key: bytes = None,
 ///     personal: bytes = None,
 /// ) -> None:
 ///     """
@@ -82,7 +85,7 @@ STATIC mp_obj_t mod_trezorcrypto_Blake2b_make_new(const mp_obj_type_t *type,
         "time");
   }
 
-  mp_obj_Blake2b_t *o = m_new_obj(mp_obj_Blake2b_t);
+  mp_obj_Blake2b_t *o = m_new_obj_with_finaliser(mp_obj_Blake2b_t);
   o->base.type = type;
   int res = 0;
 

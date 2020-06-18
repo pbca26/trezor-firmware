@@ -1,36 +1,34 @@
 import gc
 
 from trezor import log, wire
-from trezor.messages import MessageType
 from trezor.messages.MoneroExportedKeyImage import MoneroExportedKeyImage
 from trezor.messages.MoneroKeyImageExportInitAck import MoneroKeyImageExportInitAck
 from trezor.messages.MoneroKeyImageSyncFinalAck import MoneroKeyImageSyncFinalAck
+from trezor.messages.MoneroKeyImageSyncFinalRequest import (
+    MoneroKeyImageSyncFinalRequest,
+)
 from trezor.messages.MoneroKeyImageSyncStepAck import MoneroKeyImageSyncStepAck
+from trezor.messages.MoneroKeyImageSyncStepRequest import MoneroKeyImageSyncStepRequest
 
 from apps.common import paths
-from apps.monero import CURVE, misc
+from apps.common.seed import with_slip44_keychain
+from apps.monero import CURVE, SLIP44_ID, misc
 from apps.monero.layout import confirms
 from apps.monero.xmr import crypto, key_image, monero
 from apps.monero.xmr.crypto import chacha_poly
 
 
+@with_slip44_keychain(SLIP44_ID, CURVE, allow_testnet=True)
 async def key_image_sync(ctx, msg, keychain):
     state = KeyImageSync()
 
     res = await _init_step(state, ctx, msg, keychain)
-    while True:
-        msg = await ctx.call(
-            res,
-            MessageType.MoneroKeyImageSyncStepRequest,
-            MessageType.MoneroKeyImageSyncFinalRequest,
-        )
-        del res
-        if msg.MESSAGE_WIRE_TYPE == MessageType.MoneroKeyImageSyncStepRequest:
-            res = await _sync_step(state, ctx, msg)
-        else:
-            res = await _final_step(state, ctx)
-            break
+    while state.current_output + 1 < state.num_outputs:
+        msg = await ctx.call(res, MoneroKeyImageSyncStepRequest)
+        res = await _sync_step(state, ctx, msg)
         gc.collect()
+    msg = await ctx.call(res, MoneroKeyImageSyncFinalRequest)
+    res = await _final_step(state, ctx)
 
     return res
 

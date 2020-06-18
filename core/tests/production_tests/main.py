@@ -18,6 +18,7 @@ usb = io.USB(
     manufacturer="SatoshiLabs",
     product="TREZOR",
     serial_number="000000000000000000000000",
+    usb21_landing=False,
 )
 
 usb.add(usb_vcp)
@@ -93,10 +94,25 @@ def test_sd():
     if sd.present():
         sd.power(True)
         buf1 = bytearray(8 * 1024)
-        sd.read(0, buf1)
-        sd.write(0, buf1)
+        try:
+            sd.read(0, buf1)
+        except OSError:
+            print('ERROR READING DATA')
+            sd.power(False)
+            return
+        try:
+            sd.write(0, buf1)
+        except OSError:
+            print('ERROR WRITING DATA')
+            sd.power(False)
+            return
         buf2 = bytearray(8 * 1024)
-        sd.read(0, buf2)
+        try:
+            sd.read(0, buf2)
+        except OSError:
+            print('ERROR READING DATA')
+            sd.power(False)
+            return
         if buf1 == buf2:
             print('OK')
         else:

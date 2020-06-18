@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 import os.path
 import re
-from distutils.errors import DistutilsError
 
-from setuptools import Command, find_packages, setup
+from setuptools import find_packages, setup
 
 install_requires = [
     "setuptools>=19.0",
@@ -11,10 +10,10 @@ install_requires = [
     "mnemonic>=0.17",
     "requests>=2.4.0",
     "click>=7,<8",
-    "pyblake2>=0.9.3",
     "libusb1>=1.6.4",
     "construct>=2.9",
-    "typing_extensions>=3.6",
+    "typing_extensions>=3.7.4",
+    "pyblake2>=0.9.3 ; python_version<'3.6'",
 ]
 
 CWD = os.path.dirname(os.path.realpath(__file__))
@@ -27,7 +26,7 @@ def read(*path):
 
 
 def find_version():
-    version_file = read("trezorlib", "__init__.py")
+    version_file = read("src", "trezorlib", "__init__.py")
     version_match = re.search(r"^__version__ = \"(.*)\"$", version_file, re.M)
     if version_match:
         return version_match.group(1)
@@ -35,33 +34,19 @@ def find_version():
         raise RuntimeError("Version string not found")
 
 
-class PrebuildCommand(Command):
-    description = "Deprecated. Run 'make gen' instead."
-    user_options = []
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        raise DistutilsError(self.description)
-
-
 setup(
     name="trezor",
     version=find_version(),
-    author="TREZOR",
+    author="Trezor",
     author_email="info@trezor.io",
     license="LGPLv3",
-    description="Python library for communicating with TREZOR Hardware Wallet",
+    description="Python library for communicating with Trezor Hardware Wallet",
     long_description="{}\n\n{}".format(read("README.md"), read("CHANGELOG.md")),
     long_description_content_type="text/markdown",
-    url="https://github.com/trezor/python-trezor",
-    packages=find_packages(),
-    package_data={"trezorlib": ["coins.json"]},
-    scripts=["trezorctl"],
+    url="https://github.com/trezor/trezor-firmware/tree/master/python",
+    packages=find_packages("src"),
+    package_dir={"": "src"},
+    entry_points={"console_scripts": ["trezorctl=trezorlib.cli.trezorctl:cli"]},
     install_requires=install_requires,
     extras_require={
         "hidapi": ["hidapi>=0.7.99.post20"],
@@ -77,5 +62,4 @@ setup(
         "Operating System :: MacOS :: MacOS X",
         "Programming Language :: Python :: 3 :: Only",
     ],
-    cmdclass={"prebuild": PrebuildCommand},
 )

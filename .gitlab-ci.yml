@@ -15,24 +15,30 @@ variables:
   # Run `make` in parallel
   MAKEFLAGS: "-j10"
 
+  # Apply timeout to pytest-based tests
+  PYTEST_TIMEOUT: "300"
+
   # Pipenv cache
   PIPENV_VENV_IN_PROJECT: "true"
   PIPENV_CACHE_DIR: ".cache/"
 
+  # No need for TLS because everything runs on the same machine
+  DOCKER_TLS_CERTDIR: ""
 stages:
   - environment
   - prebuild
   - build
   - test
+  - posttest
+  - deploy
 
 before_script:
-  - pipenv install
+  - command -v pipenv >/dev/null && pipenv sync --python=/usr/bin/python3
 
 include:
   - ci/environment.yml
-  - ci/prebuild.yml  # common, style
-  - ci/core.yml
-  - ci/legacy.yml
-  # - ci/python.yml  TODO
-  - ci/crypto.yml
-  - ci/storage.yml
+  - ci/prebuild.yml
+  - ci/build.yml
+  - ci/test.yml
+  - ci/posttest.yml
+  - ci/deploy.yml

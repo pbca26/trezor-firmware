@@ -1,5 +1,5 @@
 /*
- * This file is part of the TREZOR project, https://trezor.io/
+ * This file is part of the Trezor project, https://trezor.io/
  *
  * Copyright (C) 2014 Pavol Rusnak <stick@satoshilabs.com>
  *
@@ -24,12 +24,15 @@
 #include "messages-common.pb.h"
 #include "secbool.h"
 
+#define MAX_PASSPHRASE_LEN 50
+
 bool protectButton(ButtonRequestType type, bool confirm_only);
 secbool protectPinUiCallback(uint32_t wait, uint32_t progress,
                              const char* message);
 bool protectPin(bool use_cached);
 bool protectChangePin(bool removal);
-bool protectPassphrase(void);
+bool protectChangeWipeCode(bool removal);
+bool protectPassphrase(char* passphrase);
 
 extern bool protectAbortedByCancel;
 extern bool protectAbortedByInitialize;

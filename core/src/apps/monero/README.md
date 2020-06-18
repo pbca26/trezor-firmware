@@ -10,7 +10,7 @@ REVIEWER = Tomas Susanka <tomas.susanka@satoshilabs.com>,
 
 -----
 
-This Monero implementation was implemented from scratch originally for TREZOR by porting Monero C++ code to the Python codebase.
+This Monero implementation was implemented from scratch originally for Trezor by porting Monero C++ code to the Python codebase.
 
 The implementation heavily relies on the [trezor-crypto] Monero functionality which implements basic crypto primitives and
 other Monero related functionality (e.g., monero base58, accelerated and optimized Borromean range signatures)
@@ -23,7 +23,7 @@ The implementation provides the following features:
 
 ### Transaction signature
 
-Signs a Monero transaction on the TREZOR.
+Signs a Monero transaction on the Trezor.
 
 - Designed so number of UTXO is practically unlimited (hundreds to thousands)
 - Maximal number of outputs per transaction is 8 (usually there are only 2)
@@ -31,13 +31,13 @@ Signs a Monero transaction on the TREZOR.
 
 ### Key Image sync
 
-Key Image is computed with the spend key which is stored on the TREZOR.
+Key Image is computed with the spend key which is stored on the Trezor.
 
 In order to detect if the UTXO has been already spent (thus computing balance due to change transactions)
 and correct spending UTXOs the key images are required. Without the key images the Monero view only
 wallet incorrectly computes balance as it sees all ever received transactions as unspent.
 
-Key image sync is a protocol that allows to compute key images for incoming transfers by TREZOR.
+Key image sync is a protocol that allows to compute key images for incoming transfers by Trezor.
 
 Example: 20 XMR in the single UTXO is received, thus real balance is 20. 1 XMR is sent to a different
 address and remaining 19 are sent back with a change transaction. Correct balance is 19 but without
@@ -47,7 +47,7 @@ rejected by a Monero daemon as a double spending transaction.
 
 Normally, the Key image sync is not needed as the key image computation is done by
 the transaction signing algorithm. However, if the wallet file is somehow corrupted
-or the wallet is used on a new host / restored from the TREZOR the key
+or the wallet is used on a new host / restored from the Trezor the key
 image sync is required for correct function of the wallet. It recomputes key images
 for all received transaction inputs.
 
@@ -77,14 +77,14 @@ using the data. Cold wallet creates `signed_txset`
 ### Cold wallet protocols
 
 As cold wallet support is already present in Monero codebase, the protocols were well designed and analyzed.
-We decided to reuse the cold wallet approach when signing the transaction as the TREZOR pretty much behaves as the cold wallet,
-i.e., does not have access to the blockchain or full Monero node. The whole transaction is built in the TREZOR thus
+We decided to reuse the cold wallet approach when signing the transaction as the Trezor pretty much behaves as the cold wallet,
+i.e., does not have access to the blockchain or full Monero node. The whole transaction is built in the Trezor thus
 the integration has security properties of the cold wallet (which is belevied to be secure). This integration approach
-makes security analysis easier and enables to use existing codebase and protocols. This makes merging TREZOR support to
+makes security analysis easier and enables to use existing codebase and protocols. This makes merging Trezor support to
 the Monero codebase easier.
 We believe that by choosing a bit more high-level approach in the protocol design we could easily add more advanced features,
 
-TREZOR implements cold wallet protocols in this integration scheme.
+Trezor implements cold wallet protocols in this integration scheme.
 
 
 ## Description
@@ -113,12 +113,12 @@ Serialization is synchronous.
 Transaction signing and Key Image (KI) sync are multi-step stateful protocols.
 The protocol have several roundtrips.
 
-In the signing protocol the connected host mainly serves as a dumb storage providing values to the TREZOR when needed,
-mainly due to memory constrains on TREZOR. The offloaded data can be in plaintext. In this case data is HMACed with unique HMAC
+In the signing protocol the connected host mainly serves as a dumb storage providing values to the Trezor when needed,
+mainly due to memory constrains on Trezor. The offloaded data can be in plaintext. In this case data is HMACed with unique HMAC
 key to avoid data tampering, reordering, replay, reuse, etc... Some data are offloaded as protected, encrypted and authenticated
 with Chacha20Poly1305 with unique key (derived from the protocol step, message, purpose, counter, master secret).
 
-TREZOR builds the signed Monero transaction incrementally, i.e., one UTXO per round trip, one transaction output per roundtrip.
+Trezor builds the signed Monero transaction incrementally, i.e., one UTXO per round trip, one transaction output per roundtrip.
 
 ### Protocol workflow
 
@@ -144,7 +144,7 @@ In the KI sync cold wallet protocol KIs are generated by the cold wallet. For ea
 generated by the cold wallet (KI proof).
 
 KI sync is mainly needed to recover from some problem or when using a new hot-wallet (corruption of a wallet file or
-using TREZOR on a different host).
+using Trezor on a different host).
 
 The KI protocol has 3 steps.
 
@@ -180,69 +180,74 @@ For detailed description and rationale please refer to the [monero-doc].
 range proof details (type of the range proof, batching scheme).
 
 After receiving this message:
-- The TREZOR prompts user for verification of the destination addresses and amounts.
+- Trezor prompts user for verification of the destination addresses and amounts.
 - Commitments are computed thus later potential deviations from transaction destinations are detected and signing aborts.
 - Secrets for HMACs / encryption are computed, TX key is computed.
-- Precomputes required sub-addresses (init message indicates which sub-addresses are needed).
+- Deprecated: Precomputes required sub-addresses (init message indicates which sub-addresses are needed).
 
 ### `MoneroTransactionSetInputRequest`
 
-- Sends one UTXO to the TREZOR for processing, encoded as `MoneroTransactionSourceEntry`.
+- Sends one UTXO to the Trezor for processing, encoded as `MoneroTransactionSourceEntry`.
 - Contains construction data needed for signing the transaction, computing spending key for UTXO.
 
-TREZOR computes spending keys, `TxinToKey`, `pseudo_out`, HMACs for offloaded data
+Trezor computes spending keys, `TxinToKey`, `pseudo_out`, HMACs for offloaded data
 
-### `MoneroTransactionInputsPermutationRequest`
+### `MoneroTransactionInputsPermutationRequest` (Deprecated)
 
 UTXOs have to be sorted by the key image in the valid blockchain transaction.
 This message caries permutation on the key images so they are sorted in the desired way.
+
+In Client version 3+ sending the permutation is deprecated. Original sort index is sent from the host 
+when needed (to verify HMACs built on the original ordering). Moreover, permutation correctness is checked by
+the set size, HMAC validity and strict ordering on the key images.
 
 ### `MoneroTransactionInputViniRequest`
 
 - Step needed to correctly hash all transaction inputs, in the right order (permutation computed in the previous step).
 - Contains `MoneroTransactionSourceEntry` and `TxinToKey` computed in the previous step.
-- TREZOR Computes `tx_prefix_hash` is part of the signed data.
+- Trezor Computes `tx_prefix_hash` is part of the signed data.
 
 
 ### `MoneroTransactionAllInputsSetRequest`
 
 - Sent after all inputs have been processed.
 - Used in the range proof offloading to the host. E.g., in case of batched Bulletproofs with more than 2 transaction outputs.
-The message response contains TREZOR-generated commitment masks so host can compute range proof correctly.
 
 ### `MoneroTransactionSetOutputRequest`
 
 - Sends transaction output, `MoneroTransactionDestinationEntry`, one per message.
 - HMAC prevents tampering with previously accepted data (in the init step).
-- TREZOR computes data related to transaction output, e.g., range proofs, ECDH info for the receiver, output public key.
+- Trezor computes data related to transaction output, e.g., range proofs, ECDH info for the receiver, output public key.
 - In case offloaded range proof is used the request can carry computed range proof.
 
 ### `MoneroTransactionAllOutSetRequest`
 
-Sent after all transaction outputs have been sent to the TREZOR for processing.
+Sent after all transaction outputs have been sent to the Trezor for processing.
 Request is empty, the response contains computed `extra` field (may contain additional public keys if sub-addresses are used),
 computed `tx_prefix_hash` and basis for the final transaction signature `MoneroRingCtSig` (fee, transaction type).
 
 ### `MoneroTransactionMlsagDoneRequest`
 
-Message sent to ask TREZOR to compute pre-MLSAG hash required for the signature.
-Hash is computed incrementally by TREZOR since the init message and can be finalized in this step.
+Message sent to ask Trezor to compute pre-MLSAG hash required for the signature.
+Hash is computed incrementally by Trezor since the init message and can be finalized in this step.
 Request is empty, response contains message hash, required for the signature.
 
 ### `MoneroTransactionSignInputRequest`
 
 - Caries `MoneroTransactionSourceEntry`, similarly as previous messages `MoneroTransactionSetInputRequest`, `MoneroTransactionInputViniRequest`.
 - Caries computed transaction inputs, pseudo outputs, HMACs, encrypted spending keys and alpha masks
-- TREZOR generates MLSAG for this UTXO, returns the signature.
-- Code returns also `cout` value if the multisig mode is active - not fully implemented, will be needed later when implementing multisigs.
+- Trezor generates MLSAG for this UTXO, returns the signature.
+- As output masks are deterministic, the pseudo output balancing is performed in this step (sum of input masks equal to the sum of output masks).
+- Multisig is not supported.
 
 ### `MoneroTransactionFinalRequest`
 
 - Sent when all UTXOs have been signed properly
 - Finalizes transaction signature
-- Returns encrypted transaction private keys which are needed later, e.g. for TX proof. As TREZOR cannot store aux data
-for all signed transactions its offloaded encrypted to the wallet. Later when TX proof is implemented in the TREZOR it
+- Returns encrypted transaction private keys which are needed later, e.g. for TX proof. As Trezor cannot store aux data
+for all signed transactions its offloaded encrypted to the wallet. Later when TX proof is implemented in the Trezor it
 will load encrypted TX keys, decrypt it and generate the proof.
+- Since Client v3+ the final response contains opening encryption key to decrypt signatures generated in the previous step.
 
 
 ## Implementation notes
@@ -279,29 +284,6 @@ normed to avoid complications when chaining operations such as `scalarmult`s.
 
 
 ### Range signatures
-
-Borromean range signatures were optimized and ported to [trezor-crypto].
-
-Range signatures xmr_gen_range_sig are CPU intensive and memory intensive operations which were originally implemented
-in python (trezor-core) but it was not feasible to run on the Trezor device due to a small amount of RAM and long
-computation times. It was needed to optimize the algorithm and port it to C so it is feasible to run it on the real hardware and run it fast.
-
-Range signature is a well-contained problem with no allocations needed, simple API.
-For memory and timing reasons its implemented directly in trezor-crypto (as it brings real benefit to the user).
-
-On the other hand, MLASG and other ring signatures are built from building blocks in python for easier development,
-code readability, maintenance and debugging. Porting to C is not that straightforward and I don't see any benefit here.
-The memory and CPU is not the problem as in the case of range signatures so I think it is fine to have it in Python.
-Porting to C would also increase complexity of trezor-crypto and could lead to bugs.
-
-Using small and easily auditable & testable building blocks, such as ge25519_add (fast, in C) to build more complex
-schemes in high level language is, in my opinion, a scalable and secure way to build the system.
-Porting all Monero crypto schemes to C would be very time consuming and prone to errors.
-
-Having access to low-level features also speeds up development of new features, such as multisigs.
-
-MLSAG may need to be slightly changed when implementing multisigs
-(some preparations have been made already but we will see after this phase starts).
 
 Bulletproof generation and verification is implemented, however the device can handle maximum 2 batched outputs
 in the bulletproof due to high memory requirements (more on that in [monero-doc]). If number of outputs is larger

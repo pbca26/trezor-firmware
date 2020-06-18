@@ -1,5 +1,5 @@
 /*
- * This file is part of the TREZOR project, https://trezor.io/
+ * This file is part of the Trezor project, https://trezor.io/
  *
  * Copyright (c) SatoshiLabs
  *
@@ -84,14 +84,6 @@ void SystemInit(void) {
   // set CP10 and CP11 to enable full access to the fpu coprocessor; ARMv7-M
   // Architecture Reference Manual section B3.2.20
   SCB->CPACR |= ((3U << 22) | (3U << 20));
-}
-
-extern volatile uint32_t uwTick;
-
-void SysTick_Handler(void) {
-  // this is a millisecond tick counter that wraps after approximately
-  // 49.71 days = (0xffffffff / (24 * 60 * 60 * 1000))
-  uwTick++;
 }
 
 // from util.s

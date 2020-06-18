@@ -3,3 +3,5 @@
 ^\./crypto/
 ^\./legacy/
 ^\./storage/
+^\./tests/
+^\./ci/

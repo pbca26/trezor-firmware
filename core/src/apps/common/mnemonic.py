@@ -1,56 +1,69 @@
-from trezor import ui, workflow
-from trezor.crypto import bip39
+import storage.device
+from trezor import ui, utils, workflow
+from trezor.crypto import bip39, slip39
+from trezor.messages import BackupType
+from trezor.ui.text import Text
 
-from apps.common import storage
-
-TYPE_BIP39 = 0
-
-
-def get() -> (bytes, int):
-    mnemonic_secret = storage.get_mnemonic_secret()
-    mnemonic_type = storage.get_mnemonic_type() or TYPE_BIP39
-    return mnemonic_secret, mnemonic_type
+if False:
+    from typing import Optional, Tuple
+    from trezor.messages.ResetDevice import EnumTypeBackupType
 
 
-def get_seed(passphrase: str = "", progress_bar=True):
-    secret, mnemonic_type = get()
-    if mnemonic_type == TYPE_BIP39:
-        module = bip39
-    if progress_bar:
+def get() -> Tuple[Optional[bytes], int]:
+    return get_secret(), get_type()
+
+
+def get_secret() -> Optional[bytes]:
+    return storage.device.get_mnemonic_secret()
+
+
+def get_type() -> EnumTypeBackupType:
+    return storage.device.get_backup_type()
+
+
+def is_bip39() -> bool:
+    """
+    If False then SLIP-39 (either Basic or Advanced).
+    Other invalid values are checked directly in storage.
+    """
+    return get_type() == BackupType.Bip39
+
+
+def get_seed(passphrase: str = "", progress_bar: bool = True) -> bytes:
+    mnemonic_secret = get_secret()
+    if mnemonic_secret is None:
+        raise ValueError("Mnemonic not set")
+
+    render_func = None
+    if progress_bar and not utils.DISABLE_ANIMATION:
         _start_progress()
-        result = module.seed(secret.decode(), passphrase, _render_progress)
-        _stop_progress()
-    else:
-        result = module.seed(secret.decode(), passphrase)
-    return result
+        render_func = _render_progress
+
+    if is_bip39():
+        seed = bip39.seed(mnemonic_secret.decode(), passphrase, render_func)
+
+    else:  # SLIP-39
+        identifier = storage.device.get_slip39_identifier()
+        iteration_exponent = storage.device.get_slip39_iteration_exponent()
+        if identifier is None or iteration_exponent is None:
+            # Identifier or exponent expected but not found
+            raise RuntimeError
+        seed = slip39.decrypt(
+            mnemonic_secret, passphrase.encode(), iteration_exponent, identifier
+        )
+
+    return seed
 
 
-def process(mnemonics: list, mnemonic_type: int):
-    if mnemonic_type == TYPE_BIP39:
-        return mnemonics[0].encode()
-    else:
-        raise RuntimeError("Unknown mnemonic type")
+def _start_progress() -> None:
+    # Because we are drawing to the screen manually, without a layout, we
+    # should make sure that no other layout is running.
+    workflow.close_others()
+    t = Text("Please wait", ui.ICON_CONFIG)
+    ui.draw_simple(t)
 
 
-def restore() -> str:
-    secret, mnemonic_type = get()
-    if mnemonic_type == TYPE_BIP39:
-        return secret.decode()
-
-
-def _start_progress():
-    ui.backlight_fade(ui.BACKLIGHT_DIM)
-    ui.display.clear()
-    ui.header("Please wait")
-    ui.display.refresh()
-    ui.backlight_fade(ui.BACKLIGHT_NORMAL)
-
-
-def _render_progress(progress: int, total: int):
+def _render_progress(progress: int, total: int) -> None:
     p = 1000 * progress // total
     ui.display.loader(p, False, 18, ui.WHITE, ui.BG)
-    ui.display.refresh()
-
-
-def _stop_progress():
-    workflow.restartdefault()
+    ui.refresh()

@@ -7,6 +7,7 @@ RADIUS = const(2)
 
 # backlight brightness
 BACKLIGHT_NORMAL = const(150)
+BACKLIGHT_LOW = const(45)
 BACKLIGHT_DIM = const(5)
 BACKLIGHT_NONE = const(2)
 BACKLIGHT_MAX = const(255)
@@ -64,5 +65,7 @@ ICON_LOCK = "trezor/res/lock.toif"
 ICON_CLICK = "trezor/res/click.toif"
 ICON_BACK = "trezor/res/left.toif"
 ICON_SWIPE = "trezor/res/swipe.toif"
+ICON_SWIPE_LEFT = "trezor/res/swipe_left.toif"
+ICON_SWIPE_RIGHT = "trezor/res/swipe_right.toif"
 ICON_CHECK = "trezor/res/check.toif"
 ICON_SPACE = "trezor/res/space.toif"

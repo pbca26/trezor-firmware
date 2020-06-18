@@ -1,5 +1,5 @@
 /*
- * This file is part of the TREZOR project, https://trezor.io/
+ * This file is part of the Trezor project, https://trezor.io/
  *
  * Copyright (C) 2014 Pavol Rusnak <stick@satoshilabs.com>
  *
@@ -39,7 +39,7 @@
 #endif
 
 /* Screen timeout */
-uint32_t system_millis_lock_start;
+uint32_t system_millis_lock_start = 0;
 
 void check_lock_screen(void) {
   buttonUpdate();
@@ -53,7 +53,7 @@ void check_lock_screen(void) {
   // button held for long enough (2 seconds)
   if (layoutLast == layoutHome && button.NoDown >= 285000 * 2) {
     layoutDialog(&bmp_icon_question, _("Cancel"), _("Lock Device"), NULL,
-                 _("Do you really want to"), _("lock your TREZOR?"), NULL, NULL,
+                 _("Do you really want to"), _("lock your Trezor?"), NULL, NULL,
                  NULL, NULL);
 
     // wait until NoButton is released
@@ -72,7 +72,7 @@ void check_lock_screen(void) {
 
     if (button.YesUp) {
       // lock the screen
-      session_clear(true);
+      config_lockDevice();
       layoutScreensaver();
     } else {
       // resume homescreen
@@ -85,7 +85,7 @@ void check_lock_screen(void) {
     if ((timer_ms() - system_millis_lock_start) >=
         config_getAutoLockDelayMs()) {
       // lock the screen
-      session_clear(true);
+      config_lockDevice();
       layoutScreensaver();
     }
   }
@@ -100,7 +100,7 @@ static void collect_hw_entropy(bool privileged) {
     desig_get_unique_id((uint32_t *)HW_ENTROPY_DATA);
     // set entropy in the OTP randomness block
     if (!flash_otp_is_locked(FLASH_OTP_BLOCK_RANDOMNESS)) {
-      uint8_t entropy[FLASH_OTP_BLOCK_SIZE];
+      uint8_t entropy[FLASH_OTP_BLOCK_SIZE] = {0};
       random_buffer(entropy, FLASH_OTP_BLOCK_SIZE);
       flash_otp_write(FLASH_OTP_BLOCK_RANDOMNESS, 0, entropy,
                       FLASH_OTP_BLOCK_SIZE);

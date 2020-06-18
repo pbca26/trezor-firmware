@@ -1,5 +1,5 @@
 /*
- * This file is part of the TREZOR project, https://trezor.io/
+ * This file is part of the Trezor project, https://trezor.io/
  *
  * Copyright (C) 2014 Pavol Rusnak <stick@satoshilabs.com>
  *
@@ -39,26 +39,4 @@ void data2hex(const void *data, uint32_t len, char *str) {
     str[i * 2 + 1] = hexdigits[cdata[i] & 0xF];
   }
   str[len * 2] = 0;
-}
-
-uint32_t readprotobufint(const uint8_t **ptr) {
-  uint32_t result = (**ptr & 0x7F);
-  if (**ptr & 0x80) {
-    (*ptr)++;
-    result += (**ptr & 0x7F) * 128;
-    if (**ptr & 0x80) {
-      (*ptr)++;
-      result += (**ptr & 0x7F) * 128 * 128;
-      if (**ptr & 0x80) {
-        (*ptr)++;
-        result += (**ptr & 0x7F) * 128 * 128 * 128;
-        if (**ptr & 0x80) {
-          (*ptr)++;
-          result += (**ptr & 0x7F) * 128 * 128 * 128 * 128;
-        }
-      }
-    }
-  }
-  (*ptr)++;
-  return result;
 }

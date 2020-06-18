@@ -17,15 +17,20 @@ UNIX_PORT_OPTS ?=
 CROSS_PORT_OPTS ?=
 
 PRODUCTION ?= 0
+PYOPT      ?= 1
+BITCOIN_ONLY ?= 0
+RDI        ?= 1
 
 STLINK_VER ?= v2
 OPENOCD = openocd -f interface/stlink-$(STLINK_VER).cfg -c "transport select hla_swd" -f target/stm32f4x.cfg
+OPENOCD_T1 = openocd -f interface/stlink-$(STLINK_VER).cfg -c "transport select hla_swd" -f target/stm32f2x.cfg
 
 BOARDLOADER_START   = 0x08000000
 BOOTLOADER_START    = 0x08020000
 FIRMWARE_P1_START   = 0x08040000
 FIRMWARE_P2_START   = 0x08120000
 PRODTEST_START      = 0x08040000
+FIRMWARE_T1_START   = 0x08010000
 
 BOARDLOADER_MAXSIZE = 49152
 BOOTLOADER_MAXSIZE  = 131072
@@ -35,6 +40,17 @@ FIRMWARE_MAXSIZE    = 1703936
 
 GITREV=$(shell git describe --always --dirty | tr '-' '_')
 CFLAGS += -DGITREV=$(GITREV)
+
+TESTPATH = $(CURDIR)/../tests
+
+EMU = $(CURDIR)/emu.py
+EMU_LOG_FILE ?= $(TESTPATH)/trezor.log
+EMU_TEST_ARGS = --disable-animation --headless --output=$(EMU_LOG_FILE) --temporary-profile
+EMU_TEST = $(EMU) $(EMU_TEST_ARGS) -c
+
+JUNIT_XML ?= $(TESTPATH)/junit.xml
+PYTEST = pytest --junitxml=$(JUNIT_XML)
+TREZOR_FIDO2_UDP_PORT = 21326
 
 ## help commands:
 
@@ -55,7 +71,7 @@ run: ## run unix port
 	cd src ; ../$(UNIX_BUILD_DIR)/micropython
 
 emu: ## run emulator
-	./emu.sh
+	$(EMU)
 
 ## test commands:
 
@@ -63,13 +79,34 @@ test: ## run unit tests
 	cd tests ; ./run_tests.sh $(TESTOPTS)
 
 test_emu: ## run selected device tests from python-trezor
-	cd tests ; ./run_tests_device_emu.sh $(TESTOPTS)
+	$(EMU_TEST) $(PYTEST) $(TESTPATH)/device_tests $(TESTOPTS)
 
 test_emu_monero: ## run selected monero device tests from monero-agent
-	cd tests ; ./run_tests_device_emu_monero.sh $(TESTOPTS)
+	cd tests ; $(EMU_TEST) ./run_tests_device_emu_monero.sh $(TESTOPTS)
+
+test_emu_u2f: ## run selected u2f device tests from u2f-tests-hid
+	$(EMU_TEST) --slip0014 $(TESTPATH)/fido_tests/u2f-tests-hid/HIDTest $(TREZOR_FIDO2_UDP_PORT) $(TESTOPTS)
+	$(EMU_TEST) --slip0014 $(TESTPATH)/fido_tests/u2f-tests-hid/U2FTest $(TREZOR_FIDO2_UDP_PORT) $(TESTOPTS)
+
+test_emu_fido2: ## run fido2 device tests
+	cd $(TESTPATH)/fido_tests/fido2 ; \
+		$(EMU_TEST) --slip0014 $(PYTEST) --maxfail=5 --sim tests/standard/ --vendor trezor $(TESTOPTS)
+
+test_emu_click: ## run click tests
+	$(EMU_TEST) $(PYTEST) $(TESTPATH)/click_tests $(TESTOPTS)
+
+test_emu_ui: ## run ui integration tests
+	$(EMU_TEST) $(PYTEST) $(TESTPATH)/device_tests --ui=test --ui-check-missing -m "not skip_ui" $(TESTOPTS)
+
+test_emu_ui_record: ## record and hash screens for ui integration tests
+	$(EMU_TEST) $(PYTEST) $(TESTPATH)/device_tests --ui=record --ui-check-missing -m "not skip_ui" $(TESTOPTS)
 
 pylint: ## run pylint on application sources and tests
 	pylint -E $(shell find src tests -name *.py)
+
+mypy: res
+	mypy --config-file ../setup.cfg \
+		src/main.py
 
 ## code generation:
 
@@ -100,13 +137,16 @@ build_reflash: ## build reflash firmware + reflash image
 	dd if=build/bootloader/bootloader.bin of=$(REFLASH_BUILD_DIR)/sdimage.bin bs=1 seek=49152
 
 build_firmware: res build_cross ## build firmware with frozen modules
-	$(SCONS) CFLAGS="$(CFLAGS)" PRODUCTION="$(PRODUCTION)" $(FIRMWARE_BUILD_DIR)/firmware.bin
+	$(SCONS) CFLAGS="$(CFLAGS)" PRODUCTION="$(PRODUCTION)" PYOPT="$(PYOPT)" BITCOIN_ONLY="$(BITCOIN_ONLY)" RDI="$(RDI)" $(FIRMWARE_BUILD_DIR)/firmware.bin
 
 build_unix: res ## build unix port
-	$(SCONS) CFLAGS="$(CFLAGS)" $(UNIX_BUILD_DIR)/micropython $(UNIX_PORT_OPTS)
+	$(SCONS) CFLAGS="$(CFLAGS)" $(UNIX_BUILD_DIR)/micropython $(UNIX_PORT_OPTS) BITCOIN_ONLY="$(BITCOIN_ONLY)"
 
 build_unix_frozen: res build_cross ## build unix port with frozen modules
-	$(SCONS) CFLAGS="$(CFLAGS)" $(UNIX_BUILD_DIR)/micropython $(UNIX_PORT_OPTS) TREZOR_EMULATOR_FROZEN=1
+	$(SCONS) CFLAGS="$(CFLAGS)" $(UNIX_BUILD_DIR)/micropython $(UNIX_PORT_OPTS) PYOPT="$(PYOPT)" BITCOIN_ONLY="$(BITCOIN_ONLY)" TREZOR_EMULATOR_FROZEN=1
+
+build_unix_debug: res ## build unix port
+	$(SCONS) --max-drift=1 CFLAGS="$(CFLAGS)" $(UNIX_BUILD_DIR)/micropython $(UNIX_PORT_OPTS) TREZOR_EMULATOR_ASAN=1 TREZOR_EMULATOR_DEBUGGABLE=1
 
 build_cross: ## build mpy-cross port
 	$(MAKE) -C vendor/micropython/mpy-cross $(CROSS_PORT_OPTS)
@@ -114,6 +154,7 @@ build_cross: ## build mpy-cross port
 ## clean commands:
 
 clean: clean_boardloader clean_bootloader clean_prodtest clean_firmware clean_unix clean_cross ## clean all
+	rm -f ".sconsign.dblite"
 
 clean_boardloader: ## clean boardloader build
 	rm -rf $(BOARDLOADER_BUILD_DIR)
@@ -152,6 +193,9 @@ flash_prodtest: $(PRODTEST_BUILD_DIR)/prodtest.bin ## flash prodtest using OpenO
 flash_firmware: $(FIRMWARE_BUILD_DIR)/firmware.bin ## flash firmware using OpenOCD
 	$(OPENOCD) -c "init; reset halt; flash write_image erase $<.p1 $(FIRMWARE_P1_START); flash write_image erase $<.p2 $(FIRMWARE_P2_START); exit"
 
+flash_firmware_t1: $(FIRMWARE_BUILD_DIR)/firmware.bin ## flash T1 core port on T1 using OpenOCD
+	$(OPENOCD_T1) -c "init; reset halt; flash write_image erase $< $(FIRMWARE_T1_START); exit"
+
 flash_combine: $(PRODTEST_BUILD_DIR)/combined.bin ## flash combined using OpenOCD
 	$(OPENOCD) -c "init; reset halt; flash write_image erase $< $(BOARDLOADER_START); exit"
 
@@ -163,6 +207,17 @@ flash_read_storage: ## read storage sectors from flash
 
 flash_erase_storage: ## erase storage sectors from flash
 	$(OPENOCD) -c "init; flash erase_sector 0 4 4; flash erase_sector 0 16 16; exit"
+
+flash_bootloader_jlink: $(BOOTLOADER_BUILD_DIR)/bootloader.bin ## flash bootloader using JLink
+	JLinkExe -commanderscript embed/bootloader/bootloader_flash.jlink
+
+flash_firmware_jlink: $(FIRMWARE_BUILD_DIR)/firmware.bin ## flash firmware using JLink. file names must end in .bin for JLink
+	cp -f $<.p1 $<.p1.bin
+	cp -f $<.p2 $<.p2.bin
+	JLinkExe -commanderscript embed/firmware/firmware_flash.jlink
+
+flash_firmware_t1_jlink: $(FIRMWARE_BUILD_DIR)/firmware.bin ## flash T1 core port via JLink
+	JLinkExe -commanderscript embed/firmware/firmware_flash_t1.jlink
 
 ## openocd debug commands:
 
@@ -189,8 +244,8 @@ gdb_firmware: $(FIRMWARE_BUILD_DIR)/firmware.elf ## start remote gdb session to 
 ## misc commands:
 
 binctl: ## print info about binary files
-	./tools/binctl $(BOOTLOADER_BUILD_DIR)/bootloader.bin
-	./tools/binctl $(FIRMWARE_BUILD_DIR)/firmware.bin
+	./tools/headertool.py $(BOOTLOADER_BUILD_DIR)/bootloader.bin
+	./tools/headertool.py $(FIRMWARE_BUILD_DIR)/firmware.bin
 
 bloaty: ## run bloaty size profiler
 	bloaty -d symbols -n 0 -s file $(FIRMWARE_BUILD_DIR)/firmware.elf | less
@@ -215,3 +270,10 @@ upload: ## upload firmware using trezorctl
 
 upload_prodtest: ## upload prodtest using trezorctl
 	trezorctl firmware_update -f $(PRODTEST_BUILD_DIR)/prodtest.bin
+
+coverage:  # generate coverage report
+	coverage run --source=./src /dev/null 2>/dev/null && \
+	mv .coverage .coverage.empty && \
+	coverage combine .coverage.* && \
+	coverage html
+	grep pc_cov htmlcov/index.html

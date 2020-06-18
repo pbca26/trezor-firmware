@@ -1,5 +1,5 @@
 /*
- * This file is part of the TREZOR project, https://trezor.io/
+ * This file is part of the Trezor project, https://trezor.io/
  *
  * Copyright (c) SatoshiLabs
  *
@@ -20,6 +20,8 @@
 #include "flash.h"
 
 #include "embed/extmod/trezorobj.h"
+
+/// package: trezorio.__init__
 
 /// class FlashOTP:
 ///     """

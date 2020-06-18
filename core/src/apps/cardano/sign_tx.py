@@ -4,8 +4,8 @@ from trezor import log, wire
 from trezor.crypto import base58, hashlib
 from trezor.crypto.curve import ed25519
 from trezor.messages.CardanoSignedTx import CardanoSignedTx
+from trezor.messages.CardanoTxAck import CardanoTxAck
 from trezor.messages.CardanoTxRequest import CardanoTxRequest
-from trezor.messages.MessageType import CardanoTxAck
 
 from apps.cardano import CURVE, seed
 from apps.cardano.address import (
@@ -17,7 +17,6 @@ from apps.cardano.layout import confirm_sending, confirm_transaction, progress
 from apps.common import cbor
 from apps.common.paths import validate_path
 from apps.common.seed import remove_ed25519_prefix
-from apps.homescreen.homescreen import display_homescreen
 
 # the maximum allowed change address.  this should be large enough for normal
 # use and still allow to quickly brute-force the correct bip32 path
@@ -48,19 +47,15 @@ async def show_tx(
     network_name: str,
     raw_inputs: list,
     raw_outputs: list,
-) -> bool:
+) -> None:
     for index, output in enumerate(outputs):
         if is_change(raw_outputs[index].address_n, raw_inputs):
             continue
 
-        if not await confirm_sending(ctx, outcoins[index], output):
-            return False
+        await confirm_sending(ctx, outcoins[index], output)
 
     total_amount = sum(outcoins)
-    if not await confirm_transaction(ctx, total_amount, fee, network_name):
-        return False
-
-    return True
+    await confirm_transaction(ctx, total_amount, fee, network_name)
 
 
 async def request_transaction(ctx, tx_req: CardanoTxRequest, index: int):
@@ -68,9 +63,8 @@ async def request_transaction(ctx, tx_req: CardanoTxRequest, index: int):
     return await ctx.call(tx_req, CardanoTxAck)
 
 
-async def sign_tx(ctx, msg):
-    keychain = await seed.get_keychain(ctx)
-
+@seed.with_keychain
+async def sign_tx(ctx, msg, keychain: seed.Keychain):
     progress.init(msg.transactions_count, "Loading data")
 
     try:
@@ -102,9 +96,6 @@ async def sign_tx(ctx, msg):
             msg.inputs, msg.outputs, keychain, msg.protocol_magic, input_coins_sum
         )
 
-        # clear progress bar
-        display_homescreen()
-
         for i in msg.inputs:
             await validate_path(ctx, validate_full_path, keychain, i.address_n, CURVE)
 
@@ -118,7 +109,7 @@ async def sign_tx(ctx, msg):
         raise wire.ProcessError("Signing failed")
 
     # display the transaction in UI
-    if not await show_tx(
+    await show_tx(
         ctx,
         transaction.output_addresses,
         transaction.outgoing_coins,
@@ -126,8 +117,7 @@ async def sign_tx(ctx, msg):
         transaction.network_name,
         transaction.inputs,
         transaction.outputs,
-    ):
-        raise wire.ActionCancelled("Signing cancelled")
+    )
 
     return tx
 

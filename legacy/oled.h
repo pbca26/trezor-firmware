@@ -1,5 +1,5 @@
 /*
- * This file is part of the TREZOR project, https://trezor.io/
+ * This file is part of the Trezor project, https://trezor.io/
  *
  * Copyright (C) 2014 Pavol Rusnak <stick@satoshilabs.com>
  *
@@ -39,15 +39,15 @@ void oledInvertDebugLink(void);
 
 void oledSetBuffer(uint8_t *buf);
 const uint8_t *oledGetBuffer(void);
+bool oledGetPixel(int x, int y);
 void oledDrawPixel(int x, int y);
 void oledClearPixel(int x, int y);
 void oledInvertPixel(int x, int y);
-void oledDrawChar(int x, int y, char c, int zoom);
-int oledStringWidth(const char *text, int font);
-
-void oledDrawString(int x, int y, const char *text, int font);
-void oledDrawStringCenter(int x, int y, const char *text, int font);
-void oledDrawStringRight(int x, int y, const char *text, int font);
+void oledDrawChar(int x, int y, char c, uint8_t font);
+int oledStringWidth(const char *text, uint8_t font);
+void oledDrawString(int x, int y, const char *text, uint8_t font);
+void oledDrawStringCenter(int x, int y, const char *text, uint8_t font);
+void oledDrawStringRight(int x, int y, const char *text, uint8_t font);
 void oledDrawBitmap(int x, int y, const BITMAP *bmp);
 void oledInvert(int x1, int y1, int x2, int y2);
 void oledBox(int x1, int y1, int x2, int y2, bool set);
@@ -55,5 +55,7 @@ void oledHLine(int y);
 void oledFrame(int x1, int y1, int x2, int y2);
 void oledSwipeLeft(void);
 void oledSwipeRight(void);
+void oledSCA(int y1, int y2, int val);
+void oledSCAInside(int y1, int y2, int val, int a, int b);
 
 #endif

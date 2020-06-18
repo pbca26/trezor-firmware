@@ -1,5 +1,5 @@
 /*
- * This file is part of the TREZOR project, https://trezor.io/
+ * This file is part of the Trezor project, https://trezor.io/
  *
  * Copyright (C) 2014 Pavol Rusnak <stick@satoshilabs.com>
  *
@@ -52,19 +52,24 @@ void fsm_msgInitialize(const Initialize *msg);
 void fsm_msgGetFeatures(const GetFeatures *msg);
 void fsm_msgPing(const Ping *msg);
 void fsm_msgChangePin(const ChangePin *msg);
+void fsm_msgChangeWipeCode(const ChangeWipeCode *msg);
 void fsm_msgWipeDevice(const WipeDevice *msg);
 void fsm_msgGetEntropy(const GetEntropy *msg);
+#if DEBUG_LINK
 void fsm_msgLoadDevice(const LoadDevice *msg);
+#endif
 void fsm_msgResetDevice(const ResetDevice *msg);
 void fsm_msgEntropyAck(const EntropyAck *msg);
 void fsm_msgBackupDevice(const BackupDevice *msg);
 void fsm_msgCancel(const Cancel *msg);
-void fsm_msgClearSession(const ClearSession *msg);
+void fsm_msgLockDevice(const LockDevice *msg);
+void fsm_msgEndSession(const EndSession *msg);
 void fsm_msgApplySettings(const ApplySettings *msg);
 void fsm_msgApplyFlags(const ApplyFlags *msg);
 void fsm_msgRecoveryDevice(const RecoveryDevice *msg);
 void fsm_msgWordAck(const WordAck *msg);
 void fsm_msgSetU2FCounter(const SetU2FCounter *msg);
+void fsm_msgGetNextU2FCounter(void);
 
 // coin
 void fsm_msgGetPublicKey(const GetPublicKey *msg);

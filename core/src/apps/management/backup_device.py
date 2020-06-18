@@ -1,36 +1,27 @@
+import storage
+import storage.device
 from trezor import wire
 from trezor.messages.Success import Success
 
-from apps.common import mnemonic, storage
-from apps.management.reset_device import (
-    check_mnemonic,
-    show_backup_warning,
-    show_mnemonic,
-    show_wrong_entry,
-)
+from apps.common import mnemonic
+from apps.management.reset_device import backup_seed, layout
 
 
 async def backup_device(ctx, msg):
-    if not storage.is_initialized():
-        raise wire.ProcessError("Device is not initialized")
-    if not storage.needs_backup():
+    if not storage.device.is_initialized():
+        raise wire.NotInitialized("Device is not initialized")
+    if not storage.device.needs_backup():
         raise wire.ProcessError("Seed already backed up")
 
-    words = mnemonic.restore()
+    mnemonic_secret, mnemonic_type = mnemonic.get()
 
-    # warn user about mnemonic safety
-    await show_backup_warning(ctx)
+    storage.device.set_unfinished_backup(True)
+    storage.device.set_backed_up()
 
-    storage.set_unfinished_backup(True)
-    storage.set_backed_up()
+    await backup_seed(ctx, mnemonic_type, mnemonic_secret)
 
-    while True:
-        # show mnemonic and require confirmation of a random word
-        await show_mnemonic(ctx, words)
-        if await check_mnemonic(ctx, words):
-            break
-        await show_wrong_entry(ctx)
+    storage.device.set_unfinished_backup(False)
 
-    storage.set_unfinished_backup(False)
+    await layout.show_backup_success(ctx)
 
     return Success(message="Seed successfully backed up")
