@@ -1,5 +1,5 @@
 /*
- * This file is part of the TREZOR project, https://trezor.io/
+ * This file is part of the Trezor project, https://trezor.io/
  *
  * Copyright (c) SatoshiLabs
  *
@@ -39,7 +39,8 @@ STATIC mp_obj_t mod_trezorcrypto_random_uniform(mp_obj_t n) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mod_trezorcrypto_random_uniform_obj,
                                  mod_trezorcrypto_random_uniform);
 
-/// def bytes(len: int) -> bytes:
+/// import builtins
+/// def bytes(len: int) -> builtins.bytes:
 ///     """
 ///     Generate random bytes sequence of length len.
 ///     """
@@ -83,6 +84,19 @@ STATIC mp_obj_t mod_trezorcrypto_random_shuffle(mp_obj_t data) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mod_trezorcrypto_random_shuffle_obj,
                                  mod_trezorcrypto_random_shuffle);
 
+#ifdef TREZOR_EMULATOR
+/// def reseed(value: int) -> None:
+///     """
+///     Re-seed the RNG with given value.
+///     """
+STATIC mp_obj_t mod_trezorcrypto_random_reseed(mp_obj_t data) {
+  random_reseed(trezor_obj_get_uint(data));
+  return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(mod_trezorcrypto_random_reseed_obj,
+                                 mod_trezorcrypto_random_reseed);
+#endif
+
 STATIC const mp_rom_map_elem_t mod_trezorcrypto_random_globals_table[] = {
     {MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_random)},
     {MP_ROM_QSTR(MP_QSTR_uniform),
@@ -91,6 +105,10 @@ STATIC const mp_rom_map_elem_t mod_trezorcrypto_random_globals_table[] = {
      MP_ROM_PTR(&mod_trezorcrypto_random_bytes_obj)},
     {MP_ROM_QSTR(MP_QSTR_shuffle),
      MP_ROM_PTR(&mod_trezorcrypto_random_shuffle_obj)},
+#ifdef TREZOR_EMULATOR
+    {MP_ROM_QSTR(MP_QSTR_reseed),
+     MP_ROM_PTR(&mod_trezorcrypto_random_reseed_obj)},
+#endif
 };
 STATIC MP_DEFINE_CONST_DICT(mod_trezorcrypto_random_globals,
                             mod_trezorcrypto_random_globals_table);

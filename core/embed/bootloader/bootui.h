@@ -1,5 +1,5 @@
 /*
- * This file is part of the TREZOR project, https://trezor.io/
+ * This file is part of the Trezor project, https://trezor.io/
  *
  * Copyright (c) SatoshiLabs
  *
@@ -38,8 +38,9 @@ void ui_screen_info_fingerprint(const image_header* const hdr);
 
 void ui_screen_install_confirm_upgrade(const vendor_header* const vhdr,
                                        const image_header* const hdr);
-void ui_screen_install_confirm_newvendor(const vendor_header* const vhdr,
-                                         const image_header* const hdr);
+void ui_screen_install_confirm_newvendor_or_downgrade_wipe(
+    const vendor_header* const vhdr, const image_header* const hdr,
+    secbool downgrade_wipe);
 void ui_screen_install(void);
 void ui_screen_install_progress_erase(int pos, int len);
 void ui_screen_install_progress_upload(int pos);

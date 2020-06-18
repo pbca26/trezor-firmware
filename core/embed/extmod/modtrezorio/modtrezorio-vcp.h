@@ -1,5 +1,5 @@
 /*
- * This file is part of the TREZOR project, https://trezor.io/
+ * This file is part of the Trezor project, https://trezor.io/
  *
  * Copyright (c) SatoshiLabs
  *
@@ -18,6 +18,8 @@
  */
 
 void pendsv_kbd_intr(void);
+
+/// package: trezorio.__init__
 
 /// class VCP:
 ///     """

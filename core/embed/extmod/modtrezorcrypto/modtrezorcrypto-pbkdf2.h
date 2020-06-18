@@ -1,5 +1,5 @@
 /*
- * This file is part of the TREZOR project, https://trezor.io/
+ * This file is part of the Trezor project, https://trezor.io/
  *
  * Copyright (c) SatoshiLabs
  *
@@ -27,10 +27,12 @@
 
 /// package: trezorcrypto.__init__
 
-/// class Pbkdf2:
+/// class pbkdf2:
 ///     """
 ///     PBKDF2 context.
 ///     """
+///     HMAC_SHA256: int
+///     HMAC_SHA512: int
 typedef struct _mp_obj_Pbkdf2_t {
   mp_obj_base_t base;
   union {
@@ -57,7 +59,7 @@ STATIC mp_obj_t mod_trezorcrypto_Pbkdf2_make_new(const mp_obj_type_t *type,
                                                  size_t n_args, size_t n_kw,
                                                  const mp_obj_t *args) {
   mp_arg_check_num(n_args, n_kw, 3, 4, false);
-  mp_obj_Pbkdf2_t *o = m_new_obj(mp_obj_Pbkdf2_t);
+  mp_obj_Pbkdf2_t *o = m_new_obj_with_finaliser(mp_obj_Pbkdf2_t);
   o->base.type = type;
 
   mp_buffer_info_t password;

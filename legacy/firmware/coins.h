@@ -1,5 +1,5 @@
 /*
- * This file is part of the TREZOR project, https://trezor.io/
+ * This file is part of the Trezor project, https://trezor.io/
  *
  * Copyright (C) 2014 Pavol Rusnak <stick@satoshilabs.com>
  *
@@ -31,8 +31,7 @@ typedef struct _CoinInfo {
   const char *coin_shortcut;
   uint64_t maxfee_kb;
   const char *signed_message_header;
-  bool has_address_type;
-  bool has_address_type_p2sh;
+  uint32_t decimals;
   bool has_segwit;
   bool has_fork_id;
   bool force_bip143;
@@ -47,8 +46,12 @@ typedef struct _CoinInfo {
   const char *bech32_prefix;
   const char *cashaddr_prefix;
   uint32_t coin_type;
+  bool negative_fee;
   const char *curve_name;
   const curve_info *curve;
+  bool extra_data;
+  bool timestamp;
+  bool overwintered;
 } CoinInfo;
 
 #include "coin_info.h"

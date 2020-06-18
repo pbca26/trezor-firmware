@@ -1,13 +1,12 @@
 from trezor.crypto.curve import secp256k1
 from trezor.crypto.hashlib import sha3_256
 from trezor.messages.EthereumMessageSignature import EthereumMessageSignature
-from trezor.ui.text import Text
 from trezor.utils import HashWriter
 
 from apps.common import paths
-from apps.common.confirm import require_confirm
-from apps.common.signverify import split_message
+from apps.common.signverify import require_confirm_sign_message
 from apps.ethereum import CURVE, address
+from apps.ethereum.keychain import with_keychain_from_path
 
 
 def message_digest(message):
@@ -19,11 +18,12 @@ def message_digest(message):
     return h.get_digest()
 
 
+@with_keychain_from_path
 async def sign_message(ctx, msg, keychain):
     await paths.validate_path(
         ctx, address.validate_full_path, keychain, msg.address_n, CURVE
     )
-    await require_confirm_sign_message(ctx, msg.message)
+    await require_confirm_sign_message(ctx, "Sign ETH message", msg.message)
 
     node = keychain.derive(msg.address_n)
     signature = secp256k1.sign(
@@ -37,10 +37,3 @@ async def sign_message(ctx, msg, keychain):
     sig.address = address.address_from_bytes(node.ethereum_pubkeyhash())
     sig.signature = signature[1:] + bytearray([signature[0]])
     return sig
-
-
-async def require_confirm_sign_message(ctx, message):
-    message = split_message(message)
-    text = Text("Sign ETH message", new_lines=False)
-    text.normal(*message)
-    await require_confirm(ctx, text)

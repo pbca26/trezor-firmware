@@ -1,5 +1,6 @@
+from trezor import wire
 from trezor.crypto import base58
-from trezor.messages import EosAsset
+from trezor.messages.EosAsset import EosAsset
 
 from apps.common import HARDENED
 
@@ -12,7 +13,7 @@ def base58_encode(prefix: str, sig_prefix: str, data: bytes) -> str:
         return prefix + b58
 
 
-def eos_name_to_string(value) -> str:
+def eos_name_to_string(value: int) -> str:
     charmap = ".12345abcdefghijklmnopqrstuvwxyz"
     tmp = value
     string = ""
@@ -61,3 +62,14 @@ def validate_full_path(path: list) -> bool:
     if path[4] != 0:
         return False
     return True
+
+
+def public_key_to_wif(pub_key: bytes) -> str:
+    if pub_key[0] == 0x04 and len(pub_key) == 65:
+        head = b"\x03" if pub_key[64] & 0x01 else b"\x02"
+        compressed_pub_key = head + pub_key[1:33]
+    elif pub_key[0] in [0x02, 0x03] and len(pub_key) == 33:
+        compressed_pub_key = pub_key
+    else:
+        raise wire.DataError("invalid public key")
+    return base58_encode("EOS", "", compressed_pub_key)

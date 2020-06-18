@@ -1,5 +1,5 @@
 /*
- * This file is part of the TREZOR project, https://trezor.io/
+ * This file is part of the Trezor project, https://trezor.io/
  *
  * Copyright (c) SatoshiLabs
  *
@@ -32,10 +32,15 @@ enum AESMode {
 
 /// package: trezorcrypto.__init__
 
-/// class AES:
+/// class aes:
 ///     """
 ///     AES context.
 ///     """
+///     ECB: int
+///     CBC: int
+///     CFB: int
+///     OFB: int
+///     CTR: int
 typedef struct _mp_obj_AES_t {
   mp_obj_base_t base;
   aes_encrypt_ctx encrypt_ctx;
@@ -52,7 +57,7 @@ STATIC mp_obj_t mod_trezorcrypto_AES_make_new(const mp_obj_type_t *type,
                                               size_t n_args, size_t n_kw,
                                               const mp_obj_t *args) {
   mp_arg_check_num(n_args, n_kw, 2, 3, false);
-  mp_obj_AES_t *o = m_new_obj(mp_obj_AES_t);
+  mp_obj_AES_t *o = m_new_obj_with_finaliser(mp_obj_AES_t);
   o->base.type = type;
   o->mode = mp_obj_get_int(args[0]);
   if (o->mode < ECB || o->mode > CTR) {

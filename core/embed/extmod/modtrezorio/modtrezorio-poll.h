@@ -1,5 +1,5 @@
 /*
- * This file is part of the TREZOR project, https://trezor.io/
+ * This file is part of the Trezor project, https://trezor.io/
  *
  * Copyright (c) SatoshiLabs
  *
@@ -25,6 +25,8 @@
 #define TOUCH_IFACE (255)
 #define POLL_READ (0x0000)
 #define POLL_WRITE (0x0100)
+
+/// package: trezorio.__init__
 
 /// def poll(ifaces: Iterable[int], list_ref: List, timeout_us: int) -> bool:
 ///     """

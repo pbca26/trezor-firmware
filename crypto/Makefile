@@ -21,6 +21,7 @@ CFLAGS   += $(OPTFLAGS) \
             -Winit-self \
             -Wuninitialized \
             -Wformat-security \
+            -Wno-missing-braces \
             -Werror
 
 VALGRIND ?= 1
@@ -57,6 +58,7 @@ SRCS  += monero/xmr.c
 SRCS  += monero/range_proof.c
 SRCS  += blake256.c
 SRCS  += blake2b.c blake2s.c
+SRCS  += chacha_drbg.c
 SRCS  += groestl.c
 SRCS  += chacha20poly1305/chacha20poly1305.c chacha20poly1305/chacha_merged.c chacha20poly1305/poly1305-donna.c chacha20poly1305/rfc7539.c
 SRCS  += rc4.c
@@ -66,6 +68,7 @@ SRCS  += memzero.c
 SRCS  += shamir.c
 SRCS  += hmac_drbg.c
 SRCS  += rfc6979.c
+SRCS  += slip39.c
 
 OBJS   = $(SRCS:.c=.o)
 

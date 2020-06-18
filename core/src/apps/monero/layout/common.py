@@ -1,10 +1,8 @@
-from trezor import loop, ui, utils
-from trezor.messages import ButtonRequestType, MessageType
+from trezor import strings, ui, utils
+from trezor.messages import ButtonRequestType
+from trezor.messages.ButtonAck import ButtonAck
 from trezor.messages.ButtonRequest import ButtonRequest
 from trezor.ui.text import Text
-
-if __debug__:
-    from apps.debug import confirm_signal
 
 
 async def naive_pagination(
@@ -27,13 +25,8 @@ async def naive_pagination(
     paginated = PaginatedWithButtons(pages, one_by_one=True)
 
     while True:
-        await ctx.call(
-            ButtonRequest(code=ButtonRequestType.SignTx), MessageType.ButtonAck
-        )
-        if __debug__:
-            result = await loop.spawn(paginated, confirm_signal)
-        else:
-            result = await paginated
+        await ctx.call(ButtonRequest(code=ButtonRequestType.SignTx), ButtonAck)
+        result = await ctx.wait(paginated)
         if result is CONFIRMED:
             return True
         if result is CANCELLED:
@@ -66,7 +59,7 @@ def paginate_lines(lines, lines_per_page=5):
 
 
 def format_amount(value):
-    return "%s XMR" % utils.format_amount(value, 12)
+    return "%s XMR" % strings.format_amount(value, 12)
 
 
 def split_address(address):

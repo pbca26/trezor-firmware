@@ -1,5 +1,5 @@
 /*
- * This file is part of the TREZOR project, https://trezor.io/
+ * This file is part of the Trezor project, https://trezor.io/
  *
  * Copyright (c) SatoshiLabs
  *
@@ -39,13 +39,13 @@
 
 #else
 
-#error Unknown TREZOR Model
+#error Unknown Trezor Model
 
 #endif
 
 /*
  * Current storage version.
  */
-#define NORCOW_VERSION ((uint32_t)0x00000001)
+#define NORCOW_VERSION ((uint32_t)0x00000002)
 
 #endif

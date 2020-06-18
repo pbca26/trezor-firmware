@@ -1,5 +1,5 @@
 /*
- * This file is part of the TREZOR project, https://trezor.io/
+ * This file is part of the Trezor project, https://trezor.io/
  *
  * Copyright (C) 2018 alepop <alepooop@gmail.com>
  *
@@ -34,7 +34,8 @@ void fsm_msgLiskGetAddress(const LiskGetAddress *msg) {
 
   if (msg->has_show_display && msg->show_display) {
     if (!fsm_layoutAddress(resp->address, _("Address:"), true, 0,
-                           msg->address_n, msg->address_n_count, false)) {
+                           msg->address_n, msg->address_n_count, false, NULL, 0,
+                           NULL)) {
       return;
     }
   }

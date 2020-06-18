@@ -8,8 +8,11 @@ from trezor.messages import (
     NEMTransactionCommon,
     NEMTransfer,
 )
+from trezor.strings import format_amount
 from trezor.ui.text import Text
-from trezor.utils import format_amount
+
+from apps.common.confirm import require_confirm
+from apps.common.layout import split_address
 
 from ..helpers import (
     NEM_LEVY_PERCENTILE_DIVISOR_ABSOLUTE,
@@ -18,9 +21,6 @@ from ..helpers import (
 )
 from ..layout import require_confirm_final, require_confirm_text
 from ..mosaic.helpers import get_mosaic_definition, is_nem_xem_mosaic
-
-from apps.common.confirm import require_confirm
-from apps.common.layout import split_address
 
 
 async def ask_transfer(
@@ -134,9 +134,9 @@ async def _require_confirm_payload(ctx, payload: bytearray, encrypt=False):
     if encrypt:
         text = Text("Confirm payload", ui.ICON_SEND, ui.GREEN)
         text.bold("Encrypted:")
-        text.normal(*payload.split(" "))
+        text.normal(payload)
     else:
         text = Text("Confirm payload", ui.ICON_SEND, ui.RED)
         text.bold("Unencrypted:")
-        text.normal(*payload.split(" "))
+        text.normal(payload)
     await require_confirm(ctx, text, ButtonRequestType.ConfirmOutput)

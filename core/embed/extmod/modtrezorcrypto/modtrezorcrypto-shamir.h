@@ -1,5 +1,5 @@
 /*
- * This file is part of the TREZOR project, https://trezor.io/
+ * This file is part of the Trezor project, https://trezor.io/
  *
  * Copyright (c) SatoshiLabs
  *
@@ -27,7 +27,7 @@
 
 /// package: trezorcrypto.shamir
 
-/// def interpolate(shares, x) -> bytes:
+/// def interpolate(shares: List[Tuple[int, bytes]], x: int) -> bytes:
 ///     """
 ///     Returns f(x) given the Shamir shares (x_1, f(x_1)), ... , (x_k, f(x_k)).
 ///     :param shares: The Shamir shares.

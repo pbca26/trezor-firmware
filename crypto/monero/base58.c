@@ -102,11 +102,13 @@ bool decode_block(const char* block, size_t size, char* res)
 	uint64_t order = 1;
 	for (size_t i = size - 1; i < size; --i)
 	{
+		if (block[i] & 0x80)
+			return false; // Invalid symbol
 		int digit = reverse_alphabet(block[i]);
 		if (digit < 0)
 			return false; // Invalid symbol
 
-		uint64_t product_hi;
+		uint64_t product_hi = 0;
 		uint64_t tmp = res_num + mul128(order, (uint64_t) digit, &product_hi);
 		if (tmp < res_num || 0 != product_hi)
 			return false; // Overflow
@@ -199,7 +201,8 @@ int xmr_base58_addr_encode_check(uint64_t tag, const uint8_t *data, size_t binsz
 	}
 
 	size_t b58size = b58sz;
-	uint8_t buf[binsz + 1 + HASHER_DIGEST_LENGTH];
+	uint8_t buf[(binsz + 1) + HASHER_DIGEST_LENGTH];
+	memset(buf, 0, sizeof(buf));
 	uint8_t *hash = buf + binsz + 1;
 	buf[0] = (uint8_t) tag;
 	memcpy(buf + 1, data, binsz);
@@ -213,7 +216,8 @@ int xmr_base58_addr_decode_check(const char *addr, size_t sz, uint64_t *tag, voi
 {
 	size_t buflen = 1 + 64 + addr_checksum_size;
 	uint8_t buf[buflen];
-	uint8_t hash[HASHER_DIGEST_LENGTH];
+	memset(buf, 0, sizeof(buf));
+	uint8_t hash[HASHER_DIGEST_LENGTH] = {0};
 
 	if (!xmr_base58_decode(addr, sz, buf, &buflen)){
 		return 0;

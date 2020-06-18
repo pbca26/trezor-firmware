@@ -2,23 +2,10 @@ PYTHON=python3
 SETUP=$(PYTHON) setup.py
 
 EXCLUDES=.vscode
-STYLE_TARGETS=trezorlib trezorctl setup.py
+STYLE_TARGETS=src/trezorlib setup.py
 EXCLUDE_TARGETS=messages
 
 all: build
-
-clean-gen: ## remove generated files
-	rm -f trezorlib/messages/*.py
-	rm -f trezorlib/coins.json
-
-coins_json:
-	./helper-scripts/build-coins-json.sh
-
-coins_json_check:
-	./helper-scripts/build-coins-json.sh --check
-
-gen: clean-gen
-	make -C .. gen
 
 build:
 	$(SETUP) build
@@ -26,9 +13,13 @@ build:
 install:
 	$(SETUP) install
 
-dist: clean
+dist: clean doc
 	$(SETUP) sdist
 	$(SETUP) bdist_wheel
+
+doc:
+	$(PYTHON) helper-scripts/linkify-changelog.py
+	$(PYTHON) helper-scripts/make-options-rst.py
 
 clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and Python artifacts
 
@@ -58,6 +49,7 @@ style:
 	black $(STYLE_TARGETS)
 	isort --apply --recursive $(STYLE_TARGETS) --skip-glob "$(EXCLUDE_TARGETS)/*"
 	autoflake -i --remove-all-unused-imports -r $(STYLE_TARGETS) --exclude "$(EXCLUDE_TARGETS)"
+	flake8
 
 style_check:
 	black --check $(STYLE_TARGETS)

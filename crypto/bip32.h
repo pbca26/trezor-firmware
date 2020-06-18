@@ -71,8 +71,10 @@ int hdnode_private_ckd(HDNode *inout, uint32_t i);
 
 #if USE_CARDANO
 int hdnode_private_ckd_cardano(HDNode *inout, uint32_t i);
-int hdnode_from_seed_cardano(const uint8_t *pass, int pass_len,
-                             const uint8_t *seed, int seed_len, HDNode *out);
+int hdnode_from_seed_cardano(const uint8_t *seed, int seed_len, HDNode *out);
+int hdnode_from_entropy_cardano_icarus(const uint8_t *pass, int pass_len,
+                                       const uint8_t *seed, int seed_len,
+                                       HDNode *out);
 #endif
 
 int hdnode_public_ckd_cp(const ecdsa_curve *curve, const curve_point *parent,
@@ -131,9 +133,13 @@ int hdnode_serialize_public(const HDNode *node, uint32_t fingerprint,
 int hdnode_serialize_private(const HDNode *node, uint32_t fingerprint,
                              uint32_t version, char *str, int strsize);
 
-int hdnode_deserialize(const char *str, uint32_t version_public,
-                       uint32_t version_private, const char *curve,
-                       HDNode *node, uint32_t *fingerprint);
+int hdnode_deserialize_public(const char *str, uint32_t version,
+                              const char *curve, HDNode *node,
+                              uint32_t *fingerprint);
+
+int hdnode_deserialize_private(const char *str, uint32_t version,
+                               const char *curve, HDNode *node,
+                               uint32_t *fingerprint);
 
 void hdnode_get_address_raw(HDNode *node, uint32_t version, uint8_t *addr_raw);
 void hdnode_get_address(HDNode *node, uint32_t version, char *addr,

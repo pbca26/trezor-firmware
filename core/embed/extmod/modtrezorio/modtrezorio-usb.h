@@ -1,5 +1,5 @@
 /*
- * This file is part of the TREZOR project, https://trezor.io/
+ * This file is part of the Trezor project, https://trezor.io/
  *
  * Copyright (c) SatoshiLabs
  *
@@ -23,6 +23,8 @@ enum {
   USB_CLOSED = 0,
   USB_OPENED = 1,
 };
+
+/// package: trezorio.__init__
 
 /// class USB:
 ///     """
@@ -133,7 +135,7 @@ STATIC mp_obj_t mod_trezorio_USB_make_new(const mp_obj_type_t *type,
     mp_raise_ValueError("interface is invalid");
   }
 
-  mp_obj_USB_t *o = m_new_obj(mp_obj_USB_t);
+  mp_obj_USB_t *o = m_new_obj_with_finaliser(mp_obj_USB_t);
   o->base.type = type;
 
   o->state = USB_CLOSED;

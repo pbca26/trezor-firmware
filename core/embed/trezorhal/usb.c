@@ -1,5 +1,5 @@
 /*
- * This file is part of the TREZOR project, https://trezor.io/
+ * This file is part of the Trezor project, https://trezor.io/
  *
  * Copyright (c) SatoshiLabs
  *
@@ -21,6 +21,7 @@
 
 #include "usb.h"
 #include "common.h"
+#include "rdi.h"
 #include "usbd_core.h"
 
 #define USB_MAX_CONFIG_DESC_SIZE 256
@@ -179,20 +180,6 @@ static void usb_desc_add_iface(size_t desc_len) {
                                      usb_config_desc->wTotalLength);
 }
 
-static uint8_t usb_ep_set_nak(USBD_HandleTypeDef *dev, uint8_t ep_num) {
-  PCD_HandleTypeDef *hpcd = dev->pData;
-  USB_OTG_GlobalTypeDef *USBx = hpcd->Instance;
-  USBx_OUTEP(ep_num)->DOEPCTL |= USB_OTG_DOEPCTL_SNAK;
-  return USBD_OK;
-}
-
-static uint8_t usb_ep_clear_nak(USBD_HandleTypeDef *dev, uint8_t ep_num) {
-  PCD_HandleTypeDef *hpcd = dev->pData;
-  USB_OTG_GlobalTypeDef *USBx = hpcd->Instance;
-  USBx_OUTEP(ep_num)->DOEPCTL |= USB_OTG_DOEPCTL_CNAK;
-  return USBD_OK;
-}
-
 /*
  * USB interface implementations
  */
@@ -343,7 +330,6 @@ static uint8_t usb_class_deinit(USBD_HandleTypeDef *dev, uint8_t cfg_idx) {
 
 static uint8_t usb_class_setup(USBD_HandleTypeDef *dev,
                                USBD_SetupReqTypedef *req) {
-  wait_random();
   if (((req->bmRequest & USB_REQ_TYPE_MASK) != USB_REQ_TYPE_CLASS) &&
       ((req->bmRequest & USB_REQ_TYPE_MASK) != USB_REQ_TYPE_STANDARD) &&
       ((req->bmRequest & USB_REQ_TYPE_MASK) != USB_REQ_TYPE_VENDOR)) {
@@ -375,10 +361,12 @@ static uint8_t usb_class_setup(USBD_HandleTypeDef *dev,
               'r',
               't',  // char URL[]
           };
+          wait_random();
           USBD_CtlSendData(dev, UNCONST(webusb_url),
                            MIN_8bits(req->wLength, sizeof(webusb_url)));
           return USBD_OK;
         } else {
+          wait_random();
           USBD_CtlError(dev, req);
           return USBD_FAIL;
         }
@@ -402,10 +390,12 @@ static uint8_t usb_class_setup(USBD_HandleTypeDef *dev,
               0x00,                                // subCompatibleId
               0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // reserved
           };
+          wait_random();
           USBD_CtlSendData(dev, UNCONST(winusb_wcid),
                            MIN_8bits(req->wLength, sizeof(winusb_wcid)));
           return USBD_OK;
         } else {
+          wait_random();
           USBD_CtlError(dev, req);
           return USBD_FAIL;
         }
@@ -440,10 +430,12 @@ static uint8_t usb_class_setup(USBD_HandleTypeDef *dev,
               'c', 0x00, 'e', 0x00, 'a', 0x00, '5', 0x00, '0', 0x00, '3', 0x00,
               'd', 0x00, '}', 0x00, 0x00, 0x00, 0x00, 0x00,  // propertyData
           };
+          wait_random();
           USBD_CtlSendData(dev, UNCONST(winusb_guid),
                            MIN_8bits(req->wLength, sizeof(winusb_guid)));
           return USBD_OK;
         } else {
+          wait_random();
           USBD_CtlError(dev, req);
           return USBD_FAIL;
         }
@@ -452,18 +444,23 @@ static uint8_t usb_class_setup(USBD_HandleTypeDef *dev,
   } else if ((req->bmRequest & USB_REQ_RECIPIENT_MASK) ==
              USB_REQ_RECIPIENT_INTERFACE) {
     if (req->wIndex >= USBD_MAX_NUM_INTERFACES) {
+      wait_random();
       USBD_CtlError(dev, req);
       return USBD_FAIL;
     }
     switch (usb_ifaces[req->wIndex].type) {
       case USB_IFACE_TYPE_HID:
+        wait_random();
         return usb_hid_class_setup(dev, &usb_ifaces[req->wIndex].hid, req);
       case USB_IFACE_TYPE_VCP:
+        wait_random();
         return usb_vcp_class_setup(dev, &usb_ifaces[req->wIndex].vcp, req);
       case USB_IFACE_TYPE_WEBUSB:
+        wait_random();
         return usb_webusb_class_setup(dev, &usb_ifaces[req->wIndex].webusb,
                                       req);
       default:
+        wait_random();
         USBD_CtlError(dev, req);
         return USBD_FAIL;
     }
@@ -472,16 +469,21 @@ static uint8_t usb_class_setup(USBD_HandleTypeDef *dev,
 }
 
 static uint8_t usb_class_data_in(USBD_HandleTypeDef *dev, uint8_t ep_num) {
-  wait_random();
+#ifdef RDI
+  rdi_refresh_session_delay();
+#endif
   for (int i = 0; i < USBD_MAX_NUM_INTERFACES; i++) {
     switch (usb_ifaces[i].type) {
       case USB_IFACE_TYPE_HID:
+        wait_random();
         usb_hid_class_data_in(dev, &usb_ifaces[i].hid, ep_num);
         break;
       case USB_IFACE_TYPE_VCP:
+        wait_random();
         usb_vcp_class_data_in(dev, &usb_ifaces[i].vcp, ep_num);
         break;
       case USB_IFACE_TYPE_WEBUSB:
+        wait_random();
         usb_webusb_class_data_in(dev, &usb_ifaces[i].webusb, ep_num);
         break;
       default:
@@ -492,16 +494,21 @@ static uint8_t usb_class_data_in(USBD_HandleTypeDef *dev, uint8_t ep_num) {
 }
 
 static uint8_t usb_class_data_out(USBD_HandleTypeDef *dev, uint8_t ep_num) {
-  wait_random();
+#ifdef RDI
+  rdi_refresh_session_delay();
+#endif
   for (int i = 0; i < USBD_MAX_NUM_INTERFACES; i++) {
     switch (usb_ifaces[i].type) {
       case USB_IFACE_TYPE_HID:
+        wait_random();
         usb_hid_class_data_out(dev, &usb_ifaces[i].hid, ep_num);
         break;
       case USB_IFACE_TYPE_VCP:
+        wait_random();
         usb_vcp_class_data_out(dev, &usb_ifaces[i].vcp, ep_num);
         break;
       case USB_IFACE_TYPE_WEBUSB:
+        wait_random();
         usb_webusb_class_data_out(dev, &usb_ifaces[i].webusb, ep_num);
         break;
       default:
@@ -512,10 +519,10 @@ static uint8_t usb_class_data_out(USBD_HandleTypeDef *dev, uint8_t ep_num) {
 }
 
 static uint8_t usb_class_sof(USBD_HandleTypeDef *dev) {
-  wait_random();
   for (int i = 0; i < USBD_MAX_NUM_INTERFACES; i++) {
     switch (usb_ifaces[i].type) {
       case USB_IFACE_TYPE_VCP:
+        wait_random();
         usb_vcp_class_sof(dev, &usb_ifaces[i].vcp);
         break;
       default:

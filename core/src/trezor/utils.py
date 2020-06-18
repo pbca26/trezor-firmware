@@ -1,6 +1,7 @@
 import gc
 import sys
-from trezorutils import (  # noqa: F401
+from trezorutils import (  # type: ignore[attr-defined] # noqa: F401
+    BITCOIN_ONLY,
     EMULATOR,
     GITREV,
     MODEL,
@@ -10,29 +11,28 @@ from trezorutils import (  # noqa: F401
     consteq,
     halt,
     memcpy,
-    set_mode_unprivileged,
 )
+
+DISABLE_ANIMATION = 0
 
 if __debug__:
     if EMULATOR:
         import uos
 
-        TEST = int(uos.getenv("TREZOR_TEST") or "0")
-        DISABLE_FADE = int(uos.getenv("TREZOR_DISABLE_FADE") or "0")
-        SAVE_SCREEN = int(uos.getenv("TREZOR_SAVE_SCREEN") or "0")
+        DISABLE_ANIMATION = int(uos.getenv("TREZOR_DISABLE_ANIMATION") or "0")
         LOG_MEMORY = int(uos.getenv("TREZOR_LOG_MEMORY") or "0")
     else:
-        TEST = 0
-        DISABLE_FADE = 0
-        SAVE_SCREEN = 0
         LOG_MEMORY = 0
 
+if False:
+    from typing import Any, Iterable, Iterator, Protocol, TypeVar, Sequence
 
-def unimport_begin():
+
+def unimport_begin() -> Iterable[str]:
     return set(sys.modules)
 
 
-def unimport_end(mods):
+def unimport_end(mods: Iterable[str]) -> None:
     for mod in sys.modules:
         if mod not in mods:
             # remove reference from sys.modules
@@ -53,56 +53,64 @@ def unimport_end(mods):
     gc.collect()
 
 
-def ensure(cond, msg=None):
+def ensure(cond: bool, msg: str = None) -> None:
     if not cond:
         if msg is None:
-            raise AssertionError()
+            raise AssertionError
         else:
             raise AssertionError(msg)
 
 
-def chunks(items, size):
+if False:
+    Chunkable = TypeVar("Chunkable", str, Sequence[Any])
+
+
+def chunks(items: Chunkable, size: int) -> Iterator[Chunkable]:
     for i in range(0, len(items), size):
         yield items[i : i + size]
 
 
-def format_amount(amount, decimals):
-    d = pow(10, decimals)
-    amount = ("%d.%0*d" % (amount // d, decimals, amount % d)).rstrip("0")
-    if amount.endswith("."):
-        amount = amount[:-1]
-    return amount
+if False:
 
+    class HashContext(Protocol):
+        def update(self, buf: bytes) -> None:
+            ...
 
-def format_ordinal(number):
-    return str(number) + {1: "st", 2: "nd", 3: "rd"}.get(
-        4 if 10 <= number % 100 < 20 else number % 10, "th"
-    )
+        def digest(self) -> bytes:
+            ...
+
+    class Writer(Protocol):
+        def append(self, b: int) -> None:
+            ...
+
+        def extend(self, buf: bytes) -> None:
+            ...
 
 
 class HashWriter:
-    def __init__(self, ctx):
+    def __init__(self, ctx: HashContext) -> None:
         self.ctx = ctx
         self.buf = bytearray(1)  # used in append()
 
-    def extend(self, buf: bytearray):
-        self.ctx.update(buf)
-
-    def write(self, buf: bytearray):  # alias for extend()
-        self.ctx.update(buf)
-
-    async def awrite(self, buf: bytearray):  # AsyncWriter interface
-        return self.ctx.update(buf)
-
-    def append(self, b: int):
+    def append(self, b: int) -> None:
         self.buf[0] = b
         self.ctx.update(self.buf)
+
+    def extend(self, buf: bytes) -> None:
+        self.ctx.update(buf)
+
+    def write(self, buf: bytes) -> None:  # alias for extend()
+        self.ctx.update(buf)
+
+    async def awrite(self, buf: bytes) -> int:  # AsyncWriter interface
+        self.ctx.update(buf)
+        return len(buf)
 
     def get_digest(self) -> bytes:
         return self.ctx.digest()
 
 
-def obj_eq(l, r):
+def obj_eq(l: object, r: object) -> bool:
     """
     Compares object contents, supports __slots__.
     """
@@ -118,7 +126,7 @@ def obj_eq(l, r):
     return True
 
 
-def obj_repr(o):
+def obj_repr(o: object) -> str:
     """
     Returns a string representation of object, supports __slots__.
     """
@@ -127,3 +135,26 @@ def obj_repr(o):
     else:
         d = o.__dict__
     return "<%s: %s>" % (o.__class__.__name__, d)
+
+
+def truncate_utf8(string: str, max_bytes: int) -> str:
+    """Truncate the codepoints of a string so that its UTF-8 encoding is at most `max_bytes` in length."""
+    data = string.encode()
+    if len(data) <= max_bytes:
+        return string
+
+    # Find the starting position of the last codepoint in data[0 : max_bytes + 1].
+    i = max_bytes
+    while i >= 0 and data[i] & 0xC0 == 0x80:
+        i -= 1
+
+    return data[:i].decode()
+
+
+def is_empty_iterator(i: Iterator) -> bool:
+    try:
+        next(i)
+    except StopIteration:
+        return True
+    else:
+        return False

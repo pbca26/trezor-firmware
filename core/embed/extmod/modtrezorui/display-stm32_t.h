@@ -1,5 +1,5 @@
 /*
- * This file is part of the TREZOR project, https://trezor.io/
+ * This file is part of the Trezor project, https://trezor.io/
  *
  * Copyright (c) SatoshiLabs
  *
@@ -499,3 +499,5 @@ void display_refresh(void) {
 }
 
 const char *display_save(const char *prefix) { return NULL; }
+
+void display_clear_save(void) {}
