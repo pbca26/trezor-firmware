@@ -52,7 +52,7 @@ class TestMsgSigntxKomodoSC:
 
         out1 = proto.TxOutputType(
             address="R9HgJZo6JBKmPvhm7whLSR8wiHyZrEDVRi",
-            amount=100000000,
+            amount=3156850732 - 10000,
             script_type=proto.OutputScriptType.PAYTOADDRESS,
         )
 
@@ -77,7 +77,6 @@ class TestMsgSigntxKomodoSC:
                     request_extra_data(0, 11, TXHASH_3f53),
                     request_output(0),
                     proto.ButtonRequest(code=B.ConfirmOutput),
-                    (trezor_core, proto.ButtonRequest(code=B.SignTx)),
                     proto.ButtonRequest(code=B.SignTx),
                     request_input(0),
                     request_output(0),
@@ -97,5 +96,5 @@ class TestMsgSigntxKomodoSC:
 
         assert (
             serialized_tx.hex()
-            == "0400008085202f89011d0f8e0c6ba2dcf8be8e5f9024771dceb4c8e4120fab8c072b8eec26b1c50728000000006a4730440220158c970ca2fc6bcc33026eb5366f0342f63b35d178f7efb334b1df78fe90b67202207bc4ff69f67cf843b08564a5adc77bf5593e28ab4d5104911824ac13fe885d8f012102a87aef7b1a8f676e452d6240767699719cd58b0261c822472c25df146938bca5ffffffff01d0359041000000001976a91400178fa0b6fc253a3a402ee2cadd8a7bfec08f6388acb8302a5d000000000000000000000000000000"
+            == "0400008085202f89013042146a5a544a32a7fa2c33810f4e66241d3a7c244b31c936fe4615e00a533f030000006b483045022100fd1861fa46f2024b62881b54feba6b691ceae5d4fe32440f469356891bdcdf56022009842be6fb83fa921459023bf5edcf239a470d2e6250aefea7df87078d885f370121037d1ba4d13317412b30378ccb3060c280d80947a2f6da19525d45e1c668c4c8d4ffffffff011c9129bc000000001976a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac00000000000000000000000000000000000000"
         )

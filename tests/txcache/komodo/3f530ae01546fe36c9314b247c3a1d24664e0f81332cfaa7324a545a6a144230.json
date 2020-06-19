@@ -2,7 +2,7 @@
   "inputs": [
     {
       "prev_hash": "179f1d0cc062f9b5a72e72b22882b0447266ddb9b49a5327169403470884a247",
-      "prev_index": 0,
+      "prev_index": 9,
       "script_sig": "4730440220185248d2e16bed9f77227ff94651ace5935587cd899fbb9e49e9ba3579f2fd4f02203f01c27445218667a3855bf57a5358e58144b9d45ae69e0e11e2801ea059397c01",
       "sequence": 4294967294
     }
